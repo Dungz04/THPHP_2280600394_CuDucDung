@@ -1,0 +1,17 @@
+{
+    "name": "admin/webbanhang",
+    "autoload": {
+        "psr-4": {
+            "Admin\\Webbanhang\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dungz04",
+            "email": "dungcod04@gmail.com"
+        }
+    ],
+    "require": {
+        "firebase/php-jwt": "^6.11"
+    }
+}

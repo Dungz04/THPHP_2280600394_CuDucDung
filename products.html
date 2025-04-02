@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách sản phẩm - dBuuks</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/webbanhang/styles.css">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        .product-image {
+            max-width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        .card {
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">dBuuks</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/webbanhang/products.html">Danh sách sản phẩm</a>
+                    </li>
+                </ul>
+                <div class="search-container mx-auto">
+                    <form class="d-flex w-100 justify-content-center" id="search-form">
+                        <input class="form-control search-input me-2" type="search" name="query" placeholder="Tìm kiếm sản phẩm...">
+                        <button class="btn btn-outline-success" type="submit">Tìm kiếm</button>
+                    </form>
+                </div>
+                <ul class="navbar-nav ms-3">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/webbanhang/Product/cart">
+                            🛒 Giỏ hàng <span class="badge bg-danger"></span>
+                        </a>
+                    </li>
+                    <li class="nav-item" id="nav-username" style="display: none;">
+                        <a class="nav-link">👤 <span id="username"></span></a>
+                    </li>
+                    <li class="nav-item" id="nav-login">
+                        <a class="nav-link" href="/webbanhang/account/login">Login</a>
+                    </li>
+                    <li class="nav-item" id="nav-logout" style="display: none;">
+                        <a class="nav-link" href="#" id="logout-btn">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Nội dung chính -->
+    <div class="container mt-4">
+        <div class="text-center mb-4">
+            <h1 class="text-white bg-primary py-3 rounded">Danh Sách Sản Phẩm</h1>
+        </div>
+        <div class="row" id="product-list"></div>
+    </div>
+
+    <script>
+    $(document).ready(function() {
+        const token = localStorage.getItem('jwtToken');
+
+        // Kiểm tra trạng thái đăng nhập
+        if (!token) {
+            alert('Vui lòng đăng nhập để xem danh sách sản phẩm!');
+            window.location.href = '/webbanhang/account/login';
+            return;
+        }
+
+        // Cập nhật navbar
+        $('#nav-login').hide();
+        $('#nav-logout').show();
+
+        // Lấy thông tin user từ API /api/user (nếu có)
+        $.ajax({
+            url: 'http://localhost:8080/webbanhang/api/user',
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            success: function(userData) {
+                if (userData.username) {
+                    $('#nav-username').show();
+                    $('#username').text(userData.username);
+                }
+            },
+            error: function(xhr) {
+                console.error('Lỗi lấy thông tin user:', xhr);
+            }
+        });
+
+        // Gọi API để lấy danh sách sản phẩm
+        function loadProducts(url) {
+            $.ajax({
+                url: url || 'http://localhost:8080/webbanhang/api/product',
+                method: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + token
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        const products = response.data;
+                        const $productList = $('#product-list');
+                        $productList.empty();
+
+                        products.forEach(product => {
+                            const productHtml = `
+                                <div class="col-md-4 mb-4">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="d-flex justify-content-center align-items-center">
+                                            <img src="/webbanhang/${product.image}" 
+                                                 alt="${product.name}" class="card-img-top product-image">
+                                        </div>
+                                        <div class="card-body">
+                                            <h5 class="card-title">
+                                                <a href="/webbanhang/Product/show/${product.id}" 
+                                                   class="text-decoration-none text-dark">${product.name}</a>
+                                            </h5>
+                                            <p class="text-muted">${product.description}</p>
+                                            <p class="fw-bold text-danger">💰 ${Number(product.price).toLocaleString()} VND</p>
+                                            <p><span class="badge bg-info text-white">📚 ${product.category_name}</span></p>
+                                        </div>
+                                        <div class="card-footer text-center">
+                                            <a href="/webbanhang/Product/addToCart/${product.id}" 
+                                               class="btn btn-primary btn-sm">🛒 Thêm vào giỏ</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            $productList.append(productHtml);
+                        });
+                    } else {
+                        alert('Không thể tải danh sách sản phẩm: ' + response.message);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại!');
+                        localStorage.removeItem('jwtToken');
+                        window.location.href = '/webbanhang/account/login';
+                    } else {
+                        console.error('Lỗi gọi API:', xhr);
+                        alert('Đã xảy ra lỗi khi tải danh sách sản phẩm!');
+                    }
+                }
+            });
+        }
+
+        // Tải danh sách sản phẩm ban đầu
+        loadProducts();
+
+        // Xử lý tìm kiếm
+        $('#search-form').on('submit', function(e) {
+            e.preventDefault();
+            const query = $(this).find('input[name="query"]').val();
+            if (query) {
+                loadProducts('http://localhost:8080/webbanhang/api/product/search?query=' + encodeURIComponent(query));
+            } else {
+                loadProducts(); // Nếu không có query, tải lại toàn bộ danh sách
+            }
+        });
+
+        // Xử lý logout
+        $('#logout-btn').on('click', function(e) {
+            e.preventDefault();
+            localStorage.removeItem('jwtToken');
+            window.location.href = '/webbanhang/account/logout';
+        });
+    });
+    </script>
+</body>
+</html>
