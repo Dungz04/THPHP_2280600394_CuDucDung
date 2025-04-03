@@ -35,14 +35,14 @@ class ProductApiController
     {
         if ($this->authenticate()) {
             header('Content-Type: application/json');
-    
+
             // Lấy tham số từ query string
             $categoryId = $_GET['category_id'] ?? '';
             $sortPrice = $_GET['sort_price'] ?? '';
-    
+
             // Lấy danh sách sản phẩm từ model
             $products = $this->productModel->getProducts($categoryId, $sortPrice);
-    
+
             echo json_encode([
                 'status' => 'success',
                 'data' => $products
@@ -168,54 +168,35 @@ class ProductApiController
     {
         if ($this->authenticate()) {
             header('Content-Type: application/json');
-            error_log("Đang xử lý PUT request cho ID: " . $id);
+            error_log("Đang xử lý request cho ID: " . $id);
 
-            // Lấy dữ liệu từ PUT với multipart/form-data
-            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-            $name = '';
-            $description = '';
-            $price = '';
-            $category_id = null;
+            // Lấy dữ liệu từ $_POST và $_FILES
+            $name = $_POST['name'] ?? '';
+            $description = $_POST['description'] ?? '';
+            $price = $_POST['price'] ?? '';
+            $category_id = $_POST['category_id'] ?? null;
             $imagePath = null;
 
-            if (strpos($contentType, 'multipart/form-data') !== false) {
-                // Dữ liệu văn bản từ $_POST
-                $name = $_POST['name'] ?? '';
-                $description = $_POST['description'] ?? '';
-                $price = $_POST['price'] ?? '';
-                $category_id = $_POST['category_id'] ?? null;
+            error_log("POST data: " . print_r($_POST, true));
+            error_log("FILES data: " . print_r($_FILES, true));
 
-                // Xử lý file ảnh nếu có
-                if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                    $uploadDir = 'uploads/';
-                    if (!file_exists($uploadDir)) {
-                        mkdir($uploadDir, 0777, true);
-                    }
-                    $fileName = uniqid() . '-' . basename($_FILES['image']['name']);
-                    $imagePath = $uploadDir . $fileName;
-
-                    if (!move_uploaded_file($_FILES['image']['tmp_name'], $imagePath)) {
-                        http_response_code(500);
-                        echo json_encode([
-                            'status' => 'error',
-                            'message' => 'Không thể tải lên hình ảnh'
-                        ]);
-                        return;
-                    }
+            // Xử lý file ảnh nếu có
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = 'uploads/';
+                if (!file_exists($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
                 }
+                $fileName = uniqid() . '-' . basename($_FILES['image']['name']);
+                $imagePath = $uploadDir . $fileName;
 
-                // Debug dữ liệu nhận được
-                error_log("POST data: " . print_r($_POST, true));
-                error_log("FILES data: " . print_r($_FILES, true));
-            } else {
-                // Nếu không phải multipart/form-data, thử lấy từ php://input
-                $input = file_get_contents('php://input');
-                error_log("Raw input: " . $input);
-                parse_str($input, $data);
-                $name = $data['name'] ?? '';
-                $description = $data['description'] ?? '';
-                $price = $data['price'] ?? '';
-                $category_id = $data['category_id'] ?? null;
+                if (!move_uploaded_file($_FILES['image']['tmp_name'], $imagePath)) {
+                    http_response_code(500);
+                    echo json_encode([
+                        'status' => 'error',
+                        'message' => 'Không thể tải lên hình ảnh'
+                    ]);
+                    return;
+                }
             }
 
             error_log("Dữ liệu sau xử lý: name=$name, description=$description, price=$price, category_id=$category_id, image=" . ($imagePath ?? 'không có'));

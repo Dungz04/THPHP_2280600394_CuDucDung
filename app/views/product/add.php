@@ -3,12 +3,11 @@
 
 <div class="container mt-5">
     <div class="card shadow-lg p-4 mx-auto" style="max-width: 800px;">
-        <h2 class="text-center text-primary">Chỉnh Sửa Sản Phẩm</h2>
+        <h2 class="text-center text-primary">Thêm Sản Phẩm Mới</h2>
 
         <div id="error-message" class="alert alert-danger d-none"></div>
 
-        <form id="edit-product-form" enctype="multipart/form-data">
-            <input type="hidden" id="id" name="id">
+        <form id="add-product-form" enctype="multipart/form-data">
             <div class="mb-3">
                 <label for="name" class="form-label">Tên sản phẩm:</label>
                 <input type="text" id="name" name="name" class="form-control border-primary" required>
@@ -29,10 +28,9 @@
             </div>
             <div class="mb-3">
                 <label for="image" class="form-label">Ảnh sản phẩm:</label>
-                <input type="file" id="image" name="image" class="form-control border-primary" accept="image/*">
-                <small class="form-text text-muted">Để trống nếu không muốn thay đổi ảnh.</small>
+                <input type="file" id="image" name="image" class="form-control border-primary" accept="image/*" required>
             </div>
-            <button type="submit" class="btn btn-primary w-100 shadow">Lưu thay đổi</button>
+            <button type="submit" class="btn btn-primary w-100 shadow">Thêm sản phẩm</button>
         </form>
 
         <a href="/webbanhang/Product/list" class="btn btn-secondary w-100 mt-3 shadow">Quay lại danh sách sản phẩm</a>
@@ -46,53 +44,15 @@ document.addEventListener("DOMContentLoaded", function() {
     const token = localStorage.getItem('jwtToken');
 
     if (!token) {
-        alert('Vui lòng đăng nhập để chỉnh sửa sản phẩm!');
+        alert('Vui lòng đăng nhập để thêm sản phẩm!');
         window.location.href = '/webbanhang/account/login';
         return;
     }
 
-    const pathSegments = window.location.pathname.split('/');
-    const productId = pathSegments[pathSegments.length - 1];
+    // Tải danh mục
+    loadCategories();
 
-    if (!productId || isNaN(productId)) {
-        showError("ID sản phẩm không hợp lệ trong URL!");
-        setTimeout(() => window.location.href = "/webbanhang/Product/list", 2000);
-        return;
-    }
-
-    // Lấy thông tin sản phẩm
-    fetch(`/webbanhang/api/product/${productId}`, {
-        headers: {
-            'Authorization': 'Bearer ' + token
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(`HTTP error! Status: ${response.status}, Message: ${data.message || 'Unknown error'}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.status === "success" && data.data) {
-            const product = data.data;
-            document.getElementById("id").value = product.id;
-            document.getElementById("name").value = product.name;
-            document.getElementById("description").value = product.description;
-            document.getElementById("price").value = product.price;
-            loadCategories(product.category_id);
-        } else {
-            throw new Error(data.message || "Không thể tải sản phẩm");
-        }
-    })
-    .catch(error => {
-        console.error("Lỗi tải sản phẩm:", error);
-        showError(`Không thể tải thông tin sản phẩm: ${error.message}`);
-        setTimeout(() => window.location.href = "/webbanhang/Product/list", 2000);
-    });
-
-    function loadCategories(selectedCategoryId) {
+    function loadCategories() {
         fetch("/webbanhang/api/category", {
             headers: {
                 'Authorization': 'Bearer ' + token
@@ -110,7 +70,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     const option = document.createElement("option");
                     option.value = category.id;
                     option.textContent = category.name;
-                    if (category.id == selectedCategoryId) option.selected = true;
                     categorySelect.appendChild(option);
                 });
             } else {
@@ -123,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    document.getElementById("edit-product-form").addEventListener("submit", function(event) {
+    document.getElementById("add-product-form").addEventListener("submit", function(event) {
         event.preventDefault();
 
         const formData = new FormData(this);
@@ -138,30 +97,31 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!formData.get("description")) return showError("Mô tả không được để trống");
         if (!formData.get("price") || parseFloat(formData.get("price")) <= 0) return showError("Giá sản phẩm phải lớn hơn 0");
         if (!formData.get("category_id")) return showError("Vui lòng chọn danh mục");
+        if (!formData.get("image")) return showError("Vui lòng chọn ảnh sản phẩm");
 
-        // Sử dụng XMLHttpRequest thay vì fetch để hỗ trợ PUT với FormData tốt hơn
         const xhr = new XMLHttpRequest();
-        xhr.open('PUT', `/webbanhang/api/product/${productId}`, true);
+        xhr.open('POST', '/webbanhang/api/product', true);
         xhr.setRequestHeader('Authorization', 'Bearer ' + token);
 
         xhr.onload = function() {
+            console.log("Response status:", xhr.status);
+            console.log("Response text:", xhr.responseText);
             if (xhr.status >= 200 && xhr.status < 300) {
                 const data = JSON.parse(xhr.responseText);
                 if (data.status === "success") {
-                    alert("Cập nhật sản phẩm thành công!");
+                    alert("Thêm sản phẩm thành công!");
                     window.location.href = "/webbanhang/Product/list";
                 } else {
-                    throw new Error(data.message || "Cập nhật sản phẩm thất bại");
+                    showError(data.message || "Thêm sản phẩm thất bại");
                 }
             } else {
                 const data = JSON.parse(xhr.responseText);
-                throw new Error(`HTTP error! Status: ${xhr.status}, Message: ${data.message || 'Unknown error'}, Errors: ${JSON.stringify(data.errors || [])}`);
+                showError(`Lỗi: ${data.message || 'Unknown error'}, Chi tiết: ${JSON.stringify(data.errors || [])}`);
             }
         };
 
         xhr.onerror = function() {
-            console.error("Lỗi mạng khi gửi yêu cầu");
-            showError("Lỗi mạng khi cập nhật sản phẩm");
+            showError("Lỗi mạng khi thêm sản phẩm");
         };
 
         xhr.send(formData);

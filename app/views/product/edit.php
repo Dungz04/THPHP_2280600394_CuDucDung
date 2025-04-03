@@ -52,10 +52,11 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     const pathSegments = window.location.pathname.split('/');
+    const action = pathSegments[pathSegments.length - 2]; // Kiểm tra "edit"
     const productId = pathSegments[pathSegments.length - 1];
 
-    if (!productId || isNaN(productId)) {
-        showError("ID sản phẩm không hợp lệ trong URL!");
+    if (action !== 'edit' || !productId || isNaN(productId)) {
+        showError("Đây không phải trang chỉnh sửa sản phẩm hoặc ID không hợp lệ!");
         setTimeout(() => window.location.href = "/webbanhang/Product/list", 2000);
         return;
     }
@@ -127,6 +128,7 @@ document.addEventListener("DOMContentLoaded", function() {
         event.preventDefault();
 
         const formData = new FormData(this);
+        formData.append('_method', 'PUT'); // Thêm _method để giả lập PUT
 
         // Debug dữ liệu gửi đi
         for (let [key, value] of formData.entries()) {
@@ -139,28 +141,28 @@ document.addEventListener("DOMContentLoaded", function() {
         if (!formData.get("price") || parseFloat(formData.get("price")) <= 0) return showError("Giá sản phẩm phải lớn hơn 0");
         if (!formData.get("category_id")) return showError("Vui lòng chọn danh mục");
 
-        // Sử dụng XMLHttpRequest để gửi PUT với FormData
         const xhr = new XMLHttpRequest();
-        xhr.open('PUT', `/webbanhang/api/product/${productId}`, true);
+        xhr.open('POST', `/webbanhang/api/product/${productId}`, true); // Dùng POST với _method=PUT
         xhr.setRequestHeader('Authorization', 'Bearer ' + token);
 
         xhr.onload = function() {
+            console.log("Response status:", xhr.status);
+            console.log("Response text:", xhr.responseText);
             if (xhr.status >= 200 && xhr.status < 300) {
                 const data = JSON.parse(xhr.responseText);
                 if (data.status === "success") {
                     alert("Cập nhật sản phẩm thành công!");
                     window.location.href = "/webbanhang/Product/list";
                 } else {
-                    throw new Error(data.message || "Cập nhật sản phẩm thất bại");
+                    showError(data.message || "Cập nhật sản phẩm thất bại");
                 }
             } else {
                 const data = JSON.parse(xhr.responseText);
-                throw new Error(`HTTP error! Status: ${xhr.status}, Message: ${data.message || 'Unknown error'}, Errors: ${JSON.stringify(data.errors || [])}`);
+                showError(`Lỗi: ${data.message || 'Unknown error'}, Chi tiết: ${JSON.stringify(data.errors || [])}`);
             }
         };
 
         xhr.onerror = function() {
-            console.error("Lỗi mạng khi gửi yêu cầu");
             showError("Lỗi mạng khi cập nhật sản phẩm");
         };
 

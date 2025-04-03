@@ -25,6 +25,11 @@ if ($controllerName === 'ApiController' && isset($url[1])) {
         $id = $url[2] ?? null;
         $action = isset($url[2]) && $url[2] != '' ? $url[2] : 'index';
 
+        // Xử lý _method từ POST để giả lập PUT
+        if ($method === 'POST' && isset($_POST['_method'])) {
+            $method = strtoupper($_POST['_method']);
+        }
+
         switch ($method) {
             case 'GET':
                 if ($action === 'search') {
@@ -39,15 +44,17 @@ if ($controllerName === 'ApiController' && isset($url[1])) {
                 $controller->store();
                 break;
             case 'PUT':
-                if ($id) $controller->update($id);
-                else {
+                if ($id) {
+                    $controller->update($id);
+                } else {
                     http_response_code(400);
                     echo json_encode(['message' => 'ID is required for PUT']);
                 }
                 break;
             case 'DELETE':
-                if ($id) $controller->destroy($id);
-                else {
+                if ($id) {
+                    $controller->destroy($id);
+                } else {
                     http_response_code(400);
                     echo json_encode(['message' => 'ID is required for DELETE']);
                 }
